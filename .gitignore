@@ -3,4 +3,8 @@ uniswapV2PoolsTwo.json
 uniswapV2PoolsThree.json
 uniswapV2PoolsFour.json
 
+uniswapV2PoolsList.json
+tokenList.json 
+symbolList.json
+
 /node_modules
