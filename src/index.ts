@@ -1,10 +1,13 @@
 import { UniswapV2FactoryAbi } from "./abi/uniswapV2FactoryAbi";
 import { UniswapV2PoolAbi } from "./abi/uniswapV2PoolAbi";
+import dotenv = require('dotenv');
+dotenv.config();
 
 const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const API_KEY = "wzmEqIO1heVL-IrIBEhj6AZj6KqDRgMQ";
+const API_KEY = process.env.API_KEY;
 const uri = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY}`;
 const web3 = createAlchemyWeb3(uri);
+
 
 let uniswapV2PoolAbiModel = UniswapV2PoolAbi();
 let uniswapV2PoolAbi = uniswapV2PoolAbiModel.getAbi();
@@ -210,11 +213,11 @@ async function countEntries() {
 
 async function iterate() {
   const fs = require('fs');
-  let uniswapPoolsV2 = fs.readFileSync("uniswapV2PoolsList.json");
+  let uniswapPoolsV2 = fs.readFileSync("tokensAndPools.json");
   let pools = JSON.parse(uniswapPoolsV2);
 
   for(let i = 0; i < pools.length; i++) {
-    console.log(pools[i].poolIndex);
+    console.log(pools[i].index);
     
   }
 }
@@ -313,7 +316,7 @@ async function addTokenIndex() {
   fs.writeFileSync("tokenList.json",data);
 }
 
-async function launchSymbols() {
+async function launchSymbols(startIterator: number) {
 
   
   while(startIterator < 47551) {
@@ -354,12 +357,85 @@ async function getTokenSymbols(startIterator: number) {
       name: tokens[i].name,
       address: tokens[i].address
     }
-    let symbolList = fs.readFileSync("symbolList");
+    let symbolList = fs.readFileSync("symbolList.json");
     let symbols = JSON.parse(symbolList);
     symbols.push(symbolObject);
     let data = JSON.stringify(symbols);
-    fs.writeFileSync(data, "symbolList.json");
+    fs.writeFileSync("symbolList.json", data);
   }
+}
+
+async function addPoolsToTokenList() {
+  let hashMap = new Map();
+
+  const fs = require("fs");
+  let tokenList = fs.readFileSync("tokenList.json");
+  let tokens = JSON.parse(tokenList);
+
+  for(let i = 0; i < tokens.length; i++) {
+    let address = tokens[i].address;
+    let tokenPools: any = [];
+    let info = {
+      name: tokens[i].name,
+      index: tokens[i].index,
+      pools: tokenPools
+
+    };
+    hashMap.set(address, info);
+  }
+
+  
+  let poolsList = fs.readFileSync("uniswapV2PoolsList.json");
+  let pools = JSON.parse(poolsList);
+
+  for(let i = 0; i < pools.length; i++) {
+    let value0 = hashMap.get(pools[i].token0Address);
+    let token0Pools = value0.pools;
+    token0Pools.push(pools[i].poolAddress);
+    let info0 = {
+      name: value0.name,
+      index: value0.index,
+      pools: token0Pools
+    }
+
+    hashMap.set(pools[i].token0Address, info0);
+
+    let value1 = hashMap.get(pools[i].token1Address);
+    let token1Pools = value1.pools;
+    token1Pools.push(pools[i].poolAddress);
+    let info1 = {
+      name: value1.name,
+      index: value1.index,
+      pools: token1Pools
+    }
+
+    hashMap.set(pools[i].token1Address, info1);
+    
+  }
+
+  let tokensAndPools: any = [];
+
+  for(let i = 0; i < tokens.length; i++) {
+    let tokenAddress = tokens[i].address;
+    let value = hashMap.get(tokenAddress);
+
+    let tokenAndPool = {
+      index: tokens[i].index,
+      name: tokens[i].name,
+      address: tokenAddress,
+      pools: value.pools
+
+    }
+    tokensAndPools.push(tokenAndPool);
+  }
+  let data = JSON.stringify(tokensAndPools);
+  fs.writeFileSync("tokensAndPools.json", data);
+
+}
+
+async function getCode() {
+  let code = await web3.eth.getCode("0x514910771AF9Ca656af840dff83E8264EcF986CA");
+  console.log(code);
 }
 
 //launch();
@@ -369,4 +445,6 @@ async function getTokenSymbols(startIterator: number) {
 //generateUniqueTokenList();
 //getTokenSymbols(0);
 //addTokenIndex();
-
+//launchSymbols(0);
+//addPoolsToTokenList();
+getCode();
